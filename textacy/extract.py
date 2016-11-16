@@ -13,7 +13,7 @@ import re
 
 from cytoolz import itertoolz
 from numpy import nanmin, nanmax, zeros, NaN
-from spacy.parts_of_speech import CONJ, DET, NOUN, VERB
+from spacy.parts_of_speech import CONJ, DET, NOUN, VERB, PROPN
 from spacy.tokens.span import Span as SpacySpan
 
 import textacy
@@ -24,7 +24,6 @@ from textacy.spacy_utils import (normalized_str, get_main_verbs_of_sent,
                                  get_span_for_compound_noun,
                                  get_span_for_verb_auxiliaries)
 from textacy.constants import NUMERIC_NE_TYPES, REPORTING_VERBS
-
 
 def words(doc,
           filter_stops=True, filter_punct=True, filter_nums=False,
@@ -332,6 +331,8 @@ def subject_verb_object_triples(doc):
             of spans from ``doc`` representing a (subject, verb, object) triple,
             in order of appearance
     """
+    # TODO: Rewrite rules based on http://www.anthology.aclweb.org/W/W12/W12-0702.pdf
+    # TODO: Think about relative clauses (that-of) e.g., products that include
     # TODO: What to do about questions, where it may be VSO instead of SVO?
     # TODO: What about non-adjacent verb negations?
     # TODO: What about object (noun) negations?
@@ -342,33 +343,33 @@ def subject_verb_object_triples(doc):
 
     for sent in sents:
         start_i = sent[0].i
-
         verbs = get_main_verbs_of_sent(sent)
         for verb in verbs:
-            subjs = get_subjects_of_verb(verb)
+            subjs = get_subjects_of_verb(verb['token'], sent)
             if not subjs:
                 continue
-            objs = get_objects_of_verb(verb)
-            if not objs:
-                continue
+            #verb_span = get_span_for_verb_preps_agents(verb)
+            #verb = sent[verb_span[0] - start_i: verb_span[1] - start_i + 1]
+            verbs = get_span_for_verb_auxiliaries(verb['token'], start_i, sent)
 
-            # add adjacent auxiliaries to verbs, for context
-            # and add compounds to compound nouns
-            verb_span = get_span_for_verb_auxiliaries(verb)
-            verb = sent[verb_span[0] - start_i: verb_span[1] - start_i + 1]
-            for subj in subjs:
-                subj = sent[get_span_for_compound_noun(subj)[0] - start_i: subj.i - start_i + 1]
-                for obj in objs:
-                    if obj.pos == NOUN:
-                        span = get_span_for_compound_noun(obj)
-                    elif obj.pos == VERB:
-                        span = get_span_for_verb_auxiliaries(obj)
-                    else:
-                        span = (obj.i, obj.i)
-                    obj = sent[span[0] - start_i: span[1] - start_i + 1]
-
-                    yield (subj, verb, obj)
-
+            for verb in verbs:
+                objs = get_objects_of_verb(verb['token'])
+                if not objs:
+                    continue
+                # add adjacent auxiliaries to verbs, for context
+                # and add compounds to compound nouns
+                for subj in subjs:
+                    subj = sent[get_span_for_compound_noun(subj)[0] - start_i: subj.i - start_i + 1]
+                    for obj in objs:
+                        if obj.pos == NOUN or obj.pos == PROPN:
+                            span = get_span_for_compound_noun(obj)
+                        elif obj.pos == VERB:
+                            #span = get_span_for_verb_auxiliaries(obj, start_i, sent)
+                            span = (obj.i, obj.i)
+                        else:
+                            span = (obj.i, obj.i)
+                        obj = sent[span[0] - start_i: span[1] - start_i + 1]
+                        yield (subj, verb, obj)
 
 def acronyms_and_definitions(doc, known_acro_defs=None):
     """

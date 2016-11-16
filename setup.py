@@ -21,7 +21,8 @@ INSTALL_REQUIRES = [
     'requests>=2.10.0',
     'scipy>=0.17.0',
     'scikit-learn>=0.17.0',
-    'spacy>=1.1.0',
+    'spacy>=1.2.0',
+    'pattern>=2.6.0',
     'unidecode>=0.04.19',
     ]
 EXTRAS_REQUIRE = {

@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from itertools import takewhile
 import logging
-from spacy.parts_of_speech import NOUN, PROPN, VERB
+from spacy.symbols import NOUN, PROPN, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det
 from spacy.tokens.token import Token as SpacyToken
 from spacy.tokens.span import Span as SpacySpan
 
@@ -107,14 +107,17 @@ def merge_spans(spans):
 
 def get_main_verbs_of_sent(sent):
     """Return the main (non-auxiliary) verbs in a sentence."""
-    return [tok for tok in sent
-            if tok.pos == VERB and tok.dep_ not in {'aux', 'auxpass'}]
+    return [{'text': tok.head.text, 'token': tok.head} for tok in sent
+            if (tok.dep == nsubj or tok.dep == nsubjpass) and tok.head.pos == VERB ]
 
 
-def get_subjects_of_verb(verb):
+def get_subjects_of_verb(verb, sent):
     """Return all subjects of a verb according to the dependency parse."""
     subjs = [tok for tok in verb.lefts
-             if tok.dep_ in SUBJ_DEPS]
+             if (tok.dep == nsubj or tok.dep == nsubjpass) ]
+    # Experimental get toks pointing to verb
+    subjs.extend(tok for tok in sent if(verb in tok.children and tok.pos != VERB))
+
     # get additional conjunct subjects
     subjs.extend(tok for subj in subjs for tok in _get_conjuncts(subj))
     return subjs
@@ -126,10 +129,9 @@ def get_objects_of_verb(verb):
     including open clausal complements.
     """
     objs = [tok for tok in verb.rights
-            if tok.dep_ in OBJ_DEPS]
-    # get open clausal complements (xcomp)
-    objs.extend(tok for tok in verb.rights
-                if tok.dep_ == 'xcomp')
+            if tok.dep == pobj or tok.dep == dobj or tok.dep == attr]
+    # get open clausal complements (xcomp). MOVED TO VERB GENERATION
+    #objs.extend(tok for tok in verb.rights if tok.dep_ == 'xcomp')
     # get additional conjunct objects
     objs.extend(tok for obj in objs for tok in _get_conjuncts(obj))
     return objs
@@ -154,13 +156,23 @@ def get_span_for_compound_noun(noun):
     return (min_i, noun.i)
 
 
-def get_span_for_verb_auxiliaries(verb):
+def get_span_for_verb_auxiliaries(verb, start_i, sent):
     """
     Return document indexes spanning all (adjacent) tokens
-    around a verb that are auxiliary verbs or negations.
+    around a verb that are auxiliary verbs, negations and prepositions.
     """
+    verbs = []
     min_i = verb.i - sum(1 for _ in takewhile(lambda x: x.dep_ in AUX_DEPS,
                                               reversed(list(verb.lefts))))
-    max_i = verb.i + sum(1 for _ in takewhile(lambda x: x.dep_ in AUX_DEPS,
+    max_i = verb.i + sum(1 for _ in takewhile(lambda x: x.dep_ not in OBJ_DEPS or x.dep_ == 'xcomp',
                                               verb.rights))
-    return (min_i, max_i)
+    verb = sent[min_i - start_i: max_i - start_i + 1]
+    verbs.append({'text': verb.text, 'token': verb})
+    new_max = max_i - start_i + 1
+    # add prepositions and arguments
+    for tok in verb.rights:
+        new_max = new_max + 1
+        if tok.dep == prep or tok.dep == agent:
+            new_verb = { 'text': verb.text+' '+tok.orth_, 'token': tok}
+            verbs.append(new_verb)
+    return verbs
