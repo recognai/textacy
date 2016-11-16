@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from itertools import takewhile
 import logging
-from spacy.symbols import NOUN, PROPN, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det
+from spacy.symbols import NOUN, PROPN, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det, xcomp, conj, punct
 from spacy.tokens.token import Token as SpacyToken
 from spacy.tokens.span import Span as SpacySpan
 
@@ -143,7 +143,7 @@ def _get_conjuncts(tok):
     e.g. "Burton, [Dan], and [Josh] ...".
     """
     return [right for right in tok.rights
-            if right.dep_ == 'conj']
+            if right.dep == conj]
 
 
 def get_span_for_compound_noun(noun):
@@ -151,9 +151,11 @@ def get_span_for_compound_noun(noun):
     Return document indexes spanning all (adjacent) tokens
     in a compound noun.
     """
-    min_i = noun.i - sum(1 for _ in takewhile(lambda x: x.dep_ == 'compound',
+    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep != conj,
+                                              noun.rights))
+    min_i = noun.i - sum(1 for _ in takewhile(lambda x: True,
                                               reversed(list(noun.lefts))))
-    return (min_i, noun.i)
+    return (min_i, max_i)
 
 
 def get_span_for_verb_auxiliaries(verb, start_i, sent):
@@ -164,15 +166,16 @@ def get_span_for_verb_auxiliaries(verb, start_i, sent):
     verbs = []
     min_i = verb.i - sum(1 for _ in takewhile(lambda x: x.dep_ in AUX_DEPS,
                                               reversed(list(verb.lefts))))
-    max_i = verb.i + sum(1 for _ in takewhile(lambda x: x.dep_ not in OBJ_DEPS or x.dep_ == 'xcomp',
+    max_i = verb.i + sum(1 for _ in takewhile(lambda x: x.dep_ in AUX_DEPS,
                                               verb.rights))
     verb = sent[min_i - start_i: max_i - start_i + 1]
     verbs.append({'text': verb.text, 'token': verb})
     new_max = max_i - start_i + 1
+
     # add prepositions and arguments
     for tok in verb.rights:
         new_max = new_max + 1
-        if tok.dep == prep or tok.dep == agent:
+        if tok.dep == prep or tok.dep == agent or tok.dep == xcomp:
             new_verb = { 'text': verb.text+' '+tok.orth_, 'token': tok}
             verbs.append(new_verb)
     return verbs
