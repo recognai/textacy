@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from itertools import takewhile
 import logging
-from spacy.symbols import NOUN, PROPN, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det, xcomp, conj, punct
+from spacy.symbols import NOUN, PROPN, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det, xcomp, conj, punct, cc
 from spacy.tokens.token import Token as SpacyToken
 from spacy.tokens.span import Span as SpacySpan
 
@@ -151,7 +151,7 @@ def get_span_for_compound_noun(noun):
     Return document indexes spanning all (adjacent) tokens
     in a compound noun.
     """
-    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep != conj,
+    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep != conj and x.dep != prep and x.dep != cc and x.dep != VERB,
                                               noun.rights))
     min_i = noun.i - sum(1 for _ in takewhile(lambda x: True,
                                               reversed(list(noun.lefts))))
