@@ -151,7 +151,7 @@ def get_span_for_compound_noun(noun):
     Return document indexes spanning all (adjacent) tokens
     in a compound noun.
     """
-    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep != conj and x.dep != prep and x.dep != cc and x.dep != VERB,
+    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep != conj and x.dep != cc and x.dep != VERB and x.dep_ != "acl",
                                               noun.rights))
     min_i = noun.i - sum(1 for _ in takewhile(lambda x: True,
                                               reversed(list(noun.lefts))))
