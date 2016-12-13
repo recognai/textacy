@@ -359,8 +359,11 @@ def subject_verb_object_triples(doc):
                 # add adjacent auxiliaries to verbs, for context
                 # and add compounds to compound nouns
                 for subj in subjs:
+                    subj_type = subj.ent_type_
                     subj = sent[get_span_for_compound_noun(subj)[0] - start_i: subj.i - start_i + 1]
+
                     for obj in objs:
+                        obj_type = obj.ent_type_
                         if obj.pos != VERB:#obj.pos == NOUN or obj.pos == PROPN:
                             span = get_span_for_compound_noun(obj)
                         elif obj.pos == VERB:
@@ -370,7 +373,8 @@ def subject_verb_object_triples(doc):
                             span = (obj.i, obj.i)
 
                         obj = sent[span[0] - start_i: span[1] - start_i + 1]
-                        yield (subj, verb, obj)
+                        score = subj.similarity(obj) + obj.similarity(subj) / 2
+                        yield (subj, verb, obj, score, subj_type, obj_type)
 
 def acronyms_and_definitions(doc, known_acro_defs=None):
     """
