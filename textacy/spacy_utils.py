@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from itertools import takewhile
 import logging
-from spacy.symbols import NOUN, PROPN, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det, xcomp, conj, punct, cc
+from spacy.symbols import NOUN, ADJ, PROPN, PRON, VERB, nsubj, nsubjpass, prep, agent, attr, pobj, dobj, det, xcomp, conj, punct, cc
 from spacy.tokens.token import Token as SpacyToken
 from spacy.tokens.span import Span as SpacySpan
 
@@ -114,7 +114,7 @@ def get_main_verbs_of_sent(sent):
 def get_subjects_of_verb(verb, sent):
     """Return all subjects of a verb according to the dependency parse."""
     subjs = [tok for tok in verb.lefts
-             if (tok.dep == nsubj or tok.dep == nsubjpass) ]
+             if ((tok.dep == nsubj or tok.dep == nsubjpass) and tok.pos != PRON and tok.pos != ADJ) ]
     # Experimental get toks pointing to verb
     subjs.extend(tok for tok in sent if(verb in tok.children and tok.pos != VERB))
 
@@ -151,10 +151,21 @@ def get_span_for_compound_noun(noun):
     Return document indexes spanning all (adjacent) tokens
     in a compound noun.
     """
-    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep != conj and x.dep != cc and x.dep != VERB and x.dep_ != "acl",
-                                              noun.rights))
-    min_i = noun.i - sum(1 for _ in takewhile(lambda x: True,
-                                              reversed(list(noun.lefts))))
+    max_i = noun.i
+    min_i = noun.i
+    x_dep = None
+    for x in noun.rights:
+        if(x.dep != prep and x.dep != conj and x.dep != cc and x.dep != VERB and x.dep_ != "acl"):
+            max_i = max_i + 1
+            x_dep = x.dep
+    if(x_dep == punct):
+        max_i = max_i - 1
+    y_dep = None
+    for y in reversed(list(noun.lefts)):
+        min_i = min_i - 1
+        y_dep = y.dep
+    if(y_dep == punct):
+        min_i = min_i + 1
     return (min_i, max_i)
 
 

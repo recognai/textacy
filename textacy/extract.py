@@ -367,8 +367,8 @@ def subject_verb_object_triples(doc):
                         if obj.pos != VERB:#obj.pos == NOUN or obj.pos == PROPN:
                             span = get_span_for_compound_noun(obj)
                         elif obj.pos == VERB:
-                            #span = get_span_for_verb_auxiliaries(obj, start_i, sent)
-                            span = (obj.i, obj.i)
+                            span = get_span_for_verb_auxiliaries(obj, start_i, sent)
+                            # span = (obj.i, obj.i)
                         else:
                             span = (obj.i, obj.i)
 
