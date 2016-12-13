@@ -107,8 +107,9 @@ def merge_spans(spans):
 
 def get_main_verbs_of_sent(sent):
     """Return the main (non-auxiliary) verbs in a sentence."""
+
     return [{'text': tok.head.text, 'token': tok.head} for tok in sent
-            if (tok.dep == nsubj or tok.dep == nsubjpass) and tok.head.pos == VERB ]
+            if ((tok.dep == nsubj or tok.dep == nsubjpass) and tok.head.pos == VERB) ]
 
 
 def get_subjects_of_verb(verb, sent):
@@ -146,26 +147,37 @@ def _get_conjuncts(tok):
             if right.dep == conj]
 
 
+"""
+max_i = noun.i
+min_i = noun.i
+
+x_dep = None
+for x in noun.rights:
+    if(x.dep != prep and x.dep != conj and x.dep != cc and x.dep != VERB and x.dep_ != "acl"):
+        max_i = max_i + 1
+        x_dep = x.dep
+if(x_dep == punct):
+    max_i = max_i - 1
+
+y_dep = None
+for y in reversed(list(noun.lefts)):
+    min_i = min_i - 1
+    y_dep = y.dep
+if(y_dep == punct):
+    print(y_dep_)
+    min_i = min_i + 1
+return (min_i, max_i)
+"""
 def get_span_for_compound_noun(noun):
     """
     Return document indexes spanning all (adjacent) tokens
     in a compound noun.
     """
-    max_i = noun.i
-    min_i = noun.i
-    x_dep = None
-    for x in noun.rights:
-        if(x.dep != prep and x.dep != conj and x.dep != cc and x.dep != VERB and x.dep_ != "acl"):
-            max_i = max_i + 1
-            x_dep = x.dep
-    if(x_dep == punct):
-        max_i = max_i - 1
-    y_dep = None
-    for y in reversed(list(noun.lefts)):
-        min_i = min_i - 1
-        y_dep = y.dep
-    if(y_dep == punct):
-        min_i = min_i + 1
+    # x.dep != conj and x.dep != cc and x.dep != VERB and x.dep_ != "acl"
+    max_i = noun.i + sum(1 for _ in takewhile(lambda x: x.dep_ == 'compound' ,
+                                              noun.rights))
+    min_i = noun.i - sum(1 for _ in takewhile(lambda x: x.dep_ == 'compound',
+                                              reversed(list(noun.lefts))))
     return (min_i, max_i)
 
 

@@ -343,14 +343,19 @@ def subject_verb_object_triples(doc):
 
     for sent in sents:
         start_i = sent[0].i
-        verbs = get_main_verbs_of_sent(sent)
-        for verb in verbs:
-            subjs = get_subjects_of_verb(verb['token'], sent)
-            if not subjs:
-                continue
-            #verb_span = get_span_for_verb_preps_agents(verb)
-            #verb = sent[verb_span[0] - start_i: verb_span[1] - start_i + 1]
-            verbs = get_span_for_verb_auxiliaries(verb['token'], start_i, sent)
+        verbs_init = get_main_verbs_of_sent(sent)
+        list_candidates = []
+        verb_tmp_token = None
+        for verb_init in verbs_init:
+            if(verb_init['token'] != verb_tmp_token):
+                verb_tmp_token = verb_init['token']
+                subjs = get_subjects_of_verb(verb_init['token'], sent)
+                if not subjs:
+                    continue
+                verbs = get_span_for_verb_auxiliaries(verb_init['token'], start_i, sent)
+                list_candidates.append((subjs, verbs))
+
+        for subjs, verbs in list_candidates:
 
             for verb in verbs:
                 objs = get_objects_of_verb(verb['token'])
@@ -367,13 +372,13 @@ def subject_verb_object_triples(doc):
                         if obj.pos != VERB:#obj.pos == NOUN or obj.pos == PROPN:
                             span = get_span_for_compound_noun(obj)
                         elif obj.pos == VERB:
-                            span = get_span_for_verb_auxiliaries(obj, start_i, sent)
-                            # span = (obj.i, obj.i)
+                            #span = get_span_for_verb_auxiliaries(obj, start_i, sent)
+                            span = (obj.i, obj.i)
                         else:
                             span = (obj.i, obj.i)
 
                         obj = sent[span[0] - start_i: span[1] - start_i + 1]
-                        score = subj.similarity(obj) + obj.similarity(subj) / 2
+                        score = subj.similarity(obj) + obj.similarity(subj)
                         yield (subj, verb, obj, score, subj_type, obj_type)
 
 def acronyms_and_definitions(doc, known_acro_defs=None):
